@@ -1,6 +1,7 @@
 import socket
 import threading
 import tkinter as tk
+from datetime import datetime
 
 # Server configuration
 SERVER_HOST = '127.0.0.1'  # Server IP address
@@ -12,6 +13,9 @@ class Client:
         self.gui_thread = None
         self.clients = []  # Store connected clients
 
+    def get_send_time(self):
+        return datetime.now().strftime("%H:%M")
+    
     def start(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.connect((SERVER_HOST, SERVER_PORT))
@@ -35,7 +39,7 @@ class Client:
     def send_message(self, event=None):
         message = self.message_entry.get()
         if message:
-            self.update_chat_window(f'You: {message}')
+            self.update_chat_window(f'You: {message} ({self.get_send_time()})')
             self.server_socket.send(message.encode('utf-8'))
             self.message_entry.delete(0, tk.END)
 

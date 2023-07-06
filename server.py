@@ -65,11 +65,11 @@ class Server:
         for client in self.clients:
             client_socket, addr = client
             if addr != source_addr:
-                client_socket.send(f'{source_addr}: {message}'.encode('utf-8'))
+                client_socket.send(f'{source_addr}: {message} ({self.get_send_time()})'.encode('utf-8'))
         random_key = str(random.randint(1111,9999))
         # Update GUI chat window
         self.gui_chat_text.configure(state='normal')
-        self.gui_chat_text.insert(tk.END, f'{source_addr}\n: (encrypted_message){self.encrypt_message(message,random_key)}\nAt time: \n{self.get_send_time()}\n\n')
+        self.gui_chat_text.insert(tk.END, f'{source_addr}\n: (encrypted_message){self.encrypt_message(message,random_key)}\n Time: {self.get_send_time()}\n\n')
         self.gui_chat_text.configure(state='disabled')
     
     def create_gui(self):
