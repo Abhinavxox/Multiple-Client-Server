@@ -82,7 +82,7 @@ class Server:
         chat_frame = tk.Frame(frame, bg='white')
         chat_frame.pack(side='left', fill='both', expand=True)
 
-        chat_label = tk.Label(chat_frame, text='Group Chat')
+        chat_label = tk.Label(chat_frame, text='Group Message Log')
         chat_label.pack()
 
         self.gui_chat_text = tk.Text(chat_frame, state='disabled')
