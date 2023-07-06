@@ -1,7 +1,11 @@
 import socket
 import threading
 import tkinter as tk
-
+import base64
+import hashlib
+from Crypto.Cipher import AES
+from Crypto import Random
+import random
 # Server configuration
 HOST = '127.0.0.1'  # Server IP address
 PORT = 5001  # Server port number
@@ -43,17 +47,27 @@ class Server:
                 self.update_gui_attendance_list(f'Disconnected: {addr}')
                 break
 
+    def encrypt_message(self,message,passkey): 
+        BLOCK_SIZE = 16
+        pad = lambda x: x + (BLOCK_SIZE - len(x) % BLOCK_SIZE) * chr(BLOCK_SIZE - len(x) % BLOCK_SIZE)
+        unpad = lambda x: x[:-ord(x[len(x) - 1:])]
+        private_key = hashlib.sha256(passkey.encode("utf-8")).digest()
+        message = pad(message)
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(private_key, AES.MODE_CBC, iv)
+        return base64.b64encode(iv + cipher.encrypt(message.encode("utf-8"))).decode()
+    
     def broadcast_message(self, message, source_addr):
         for client in self.clients:
             client_socket, addr = client
             if addr != source_addr:
                 client_socket.send(f'{source_addr}: {message}'.encode('utf-8'))
-
+        random_key = str(random.randint(1111,9999))
         # Update GUI chat window
         self.gui_chat_text.configure(state='normal')
-        self.gui_chat_text.insert(tk.END, f'{source_addr}: {message}\n')
+        self.gui_chat_text.insert(tk.END, f'{source_addr}\n: (encrypted_message){self.encrypt_message(message,random_key)}\n')
         self.gui_chat_text.configure(state='disabled')
-
+    
     def create_gui(self):
         root = tk.Tk()
         root.title('Server')
