@@ -6,6 +6,7 @@ import hashlib
 from Crypto.Cipher import AES
 from Crypto import Random
 import random
+from datetime import datetime
 # Server configuration
 HOST = '127.0.0.1'  # Server IP address
 PORT = 5001  # Server port number
@@ -57,6 +58,9 @@ class Server:
         cipher = AES.new(private_key, AES.MODE_CBC, iv)
         return base64.b64encode(iv + cipher.encrypt(message.encode("utf-8"))).decode()
     
+    def get_send_time(self):
+        return datetime.now().strftime("%H:%M")
+    
     def broadcast_message(self, message, source_addr):
         for client in self.clients:
             client_socket, addr = client
@@ -65,7 +69,7 @@ class Server:
         random_key = str(random.randint(1111,9999))
         # Update GUI chat window
         self.gui_chat_text.configure(state='normal')
-        self.gui_chat_text.insert(tk.END, f'{source_addr}\n: (encrypted_message){self.encrypt_message(message,random_key)}\n')
+        self.gui_chat_text.insert(tk.END, f'{source_addr}\n: (encrypted_message){self.encrypt_message(message,random_key)}\nAt time: \n{self.get_send_time()}\n\n')
         self.gui_chat_text.configure(state='disabled')
     
     def create_gui(self):
