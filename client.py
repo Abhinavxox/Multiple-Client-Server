@@ -2,7 +2,12 @@ import socket
 import threading
 import tkinter as tk
 from datetime import datetime
-
+import base64
+import hashlib
+from Crypto.Cipher import AES
+from Crypto import Random
+import random
+from datetime import datetime
 # Server configuration
 SERVER_HOST = '127.0.0.1'  # Server IP address
 SERVER_PORT = 5001  # Server port number
@@ -12,6 +17,44 @@ class Client:
         self.server_socket = None
         self.gui_thread = None
         self.clients = []  # Store connected clients
+
+    def decrypt(self, enc):
+        password = enc.split("---")[1]
+        private_key = hashlib.sha256(password.encode("utf-8")).digest()
+        enc = base64.b64decode(enc)
+        iv = enc[:16]
+        ciphertext = enc[16:]
+        cipher = AES.new(private_key, AES.MODE_CBC, iv)
+        decrypted = cipher.decrypt(ciphertext).decode("utf-8")
+        try:
+            unpadded = self.unpad(decrypted)  # Remove padding from decrypted message
+            return unpadded
+        except ValueError:
+            # Correct underpadding error by adding appropriate padding
+            corrected = self.add_padding(decrypted)
+            return corrected
+
+    def unpad(self, padded_message):
+        padding_size = ord(padded_message[-1])
+        if padding_size > 0 and padding_size <= AES.block_size:
+            unpadded = padded_message[:-padding_size]
+            return unpadded
+        else:
+            raise ValueError("Invalid padding on message.")
+
+    def add_padding(self, message):
+        padding_size = AES.block_size - (len(message) % AES.block_size)
+        padding = chr(padding_size) * padding_size
+        padded = message + padding
+        return padded
+
+    def encrypt_message(self, message, passkey):
+        private_key = hashlib.sha256(passkey.encode("utf-8")).digest()
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(private_key, AES.MODE_CBC, iv)
+        padded_message = self.add_padding(message)  # Add padding to the message
+        encrypted = cipher.encrypt(padded_message.encode("utf-8"))
+        return base64.b64encode(iv + encrypted).decode()
 
     def get_send_time(self):
         return datetime.now().strftime("%H:%M")
@@ -31,7 +74,11 @@ class Client:
             try:
                 data = self.server_socket.recv(1024).decode('utf-8')
                 if data:
+                    address = data.split(":")[0]
+                    message = data.split(":")[1]
+                    data = address+f": {self.decrypt(message)}"
                     self.update_chat_window(data)
+                    del data
             except ConnectionResetError:
                 print('Disconnected from the server.')
                 break
@@ -39,8 +86,10 @@ class Client:
     def send_message(self, event=None):
         message = self.message_entry.get()
         if message:
+            key = str(random.randint(1000,9999))
+            message_encr = self.encrypt_message(f'{message} ({self.get_send_time()})',key)+f"---{key}"
             self.update_chat_window(f'You: {message} ({self.get_send_time()})')
-            self.server_socket.send(message.encode('utf-8'))
+            self.server_socket.send(message_encr.encode('utf-8'))
             self.message_entry.delete(0, tk.END)
 
     def create_gui(self):
